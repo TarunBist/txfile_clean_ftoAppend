@@ -84,9 +84,9 @@ dat_lifetime <- fread("../../../PII/Matchbacks/")
 
 # code to wrangle data, as needed, goes here
 
-# standardize customerID field 
+# standardize eamil field 
 dat <- dat %>%
-  mutate(customerID = tolower(trimws(customerID)))
+  mutate(email = tolower(trimws(email)))
 
 
 # create ftoFlag for new customers/orders
@@ -94,20 +94,28 @@ dat <- dat %>%
 # should be fto
 # get rid of prior customerIDs + only retain the first order from any new customer
 dat_FTO <- dat %>%
-  anti_join(dat_lifetime, by = "customerID") %>% # comment out if no lifetime file
-  filter(!(is.na(customerID) | customerID == "")) %>%
-  arrange(customerID, orderDate) %>%
-  distinct(customerID, .keep_all = TRUE) %>%
+  anti_join(dat_lifetime, by = "email") %>% # comment out if no lifetime file
+  filter(!(is.na(email) | email == "")) %>%
+  arrange(email, orderDate) %>%
+  distinct(email, .keep_all = TRUE) %>%
   mutate(ftoFlag = TRUE)
 
 # orders from missing customerIDs should be NA
 dat <- dat %>%
   left_join(select(dat_FTO, orderID, ftoFlag), by = "orderID") %>% 
   mutate(ftoFlag = replace_na(ftoFlag, FALSE),
-         ftoFlag = ifelse((customerID == "" | is.na(customerID)),
+         ftoFlag = ifelse((eamil == "" | is.na(eamil)),
                           NA, ftoFlag)) # we want any order from a missing customerID to be NA
 
+# update lifetime to include newly cleaned data
+dat_lifetime <- bind_rows(dat_lifetime, dat) # save this lifetime file in mail planner
 
+## Considerations:
+# will this be done if we are provided a customer ID instead of email?
+# what to do if historical and new tx data formats are different (which columns should be saved?)
+# How do we want to handle the outputs after the initial lifetime file upload? (create
+# cumulative lifetime files there on for upload or only work with incremental files after the 
+# 1 big lifetime file in there)
 
 # Remove previous orders --------------------------------------------------
 
@@ -151,11 +159,11 @@ fwrite(dat.cut, paste0("../../../PII/Matchbacks/", project_folder, "/",
 # if you're working with an incremental file (and already have a lifetime one in mailplanner),
 # comment out the below
 historicalFilename <- paste0(client_folder, "_lifetime_txfile_s",
-                             date(min(dat$orderDate)),
-                             "_e", date(max(dat$orderDate)),
+                             date(min(dat_lifetime$orderDate)),
+                             "_e", date(max(dat_lifetime$orderDate)),
                              ".csv")
 
-fwrite(dat, paste0("../../../PII/Matchbacks/", project_folder, "/",
+fwrite(dat_lifetime, paste0("../../../PII/Matchbacks/", project_folder, "/",
                    historicalFilename), row.names = FALSE)
 
 message(outputFilename, " is written to the PII folder! Don't forget to upload to mailplanner!")
