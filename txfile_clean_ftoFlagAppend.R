@@ -112,10 +112,14 @@ dat_lifetime <- bind_rows(dat_lifetime, dat) # save this lifetime file in mail p
 
 ## Considerations:
 # will this be done if we are provided a customer ID instead of email?
+
 # what to do if historical and new tx data formats are different (which columns should be saved?)
+
 # How do we want to handle the outputs after the initial lifetime file upload? (create
 # cumulative lifetime files there on for upload or only work with incremental files after the 
 # 1 big lifetime file in there)
+
+# If we have "cancelled" orders, do we want to retain those emails in the lifetime file?
 
 # Remove previous orders --------------------------------------------------
 
