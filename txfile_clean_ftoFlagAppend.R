@@ -84,10 +84,14 @@ dat_lifetime <- fread("../../../PII/Matchbacks/")
 
 # code to wrangle data, as needed, goes here
 
-# standardize eamil field 
+
+
+# compile fto flag --------------------------------------------------------
+# to be done at the end after the rest of the standardization
+
+# standardize email field 
 dat <- dat %>%
   mutate(email = tolower(trimws(email)))
-
 
 # create ftoFlag for new customers/orders
 # only the 1st order from a new customerID (that we don't have in mailplanner)
@@ -104,11 +108,8 @@ dat_FTO <- dat %>%
 dat <- dat %>%
   left_join(select(dat_FTO, orderID, ftoFlag), by = "orderID") %>% 
   mutate(ftoFlag = replace_na(ftoFlag, FALSE),
-         ftoFlag = ifelse((eamil == "" | is.na(eamil)),
+         ftoFlag = ifelse((email == "" | is.na(email)),
                           NA, ftoFlag)) # we want any order from a missing customerID to be NA
-
-# update lifetime to include newly cleaned data
-dat_lifetime <- bind_rows(dat_lifetime, dat) # save this lifetime file in mail planner
 
 ## Considerations:
 # will this be done if we are provided a customer ID instead of email?
@@ -160,17 +161,19 @@ outputFilename <- paste0(client_folder, "_txfile_s",
 fwrite(dat.cut, paste0("../../../PII/Matchbacks/", project_folder, "/",
                        outputFilename), row.names = FALSE)
 
+message(outputFilename, " is written to the PII folder! Don't forget to upload to mailplanner!")
+
 # if you're working with an incremental file (and already have a lifetime one in mailplanner),
 # comment out the below
 historicalFilename <- paste0(client_folder, "_lifetime_txfile_s",
-                             date(min(dat_lifetime$orderDate)),
-                             "_e", date(max(dat_lifetime$orderDate)),
+                             date(min(dat$orderDate)),
+                             "_e", date(max(dat$orderDate)),
                              ".csv")
 
-fwrite(dat_lifetime, paste0("../../../PII/Matchbacks/", project_folder, "/",
+fwrite(dat, paste0("../../../PII/Matchbacks/", project_folder, "/",
                    historicalFilename), row.names = FALSE)
 
-message(outputFilename, " is written to the PII folder! Don't forget to upload to mailplanner!")
+message(historicalFilename, " is written to the PII folder! Don't forget to upload to mailplanner!")
 
 
 
